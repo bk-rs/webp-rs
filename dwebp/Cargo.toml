@@ -1,6 +1,6 @@
 [package]
 name = "dwebp"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["vkill <vkill.net@gmail.com>"]
 edition = "2021"
 description = "dwebp"
@@ -13,8 +13,9 @@ categories = []
 readme = "README.md"
 
 [dependencies]
-webp-animation = { version = "0.4", default-features = false, features = ["image"] }
+webp-animation = { version = "0.5", default-features = false, features = ["image"] }
 image = { version = "0.23", default-features = false, features = [ "png" ] }
 
 [dev-dependencies]
 png = { version = "0.17", default-features = false }
+tempfile = { version = "3.2", default-features = false }

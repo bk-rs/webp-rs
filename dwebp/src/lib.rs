@@ -4,6 +4,9 @@ use image::{codecs::png::PngEncoder, EncodableLayout as _, ImageEncoder as _, Pi
 // use image::{DynamicImage, ImageOutputFormat};
 use webp_animation::Decoder as AwebPDecoder;
 
+//
+//
+//
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum AwebpFramePosition {
     First,
@@ -103,6 +106,9 @@ pub fn awebp_to_multi_png(awebp_bytes: impl AsRef<[u8]>) -> Result<Vec<Vec<u8>>,
         .collect::<Result<_, _>>()
 }
 
+//
+//
+//
 #[derive(Debug)]
 pub enum AwebpToPngError {
     DecodeAwebpFailed,
@@ -126,6 +132,8 @@ mod tests {
         io::Write as _,
     };
 
+    use tempfile::{tempdir, Builder};
+
     #[test]
     fn test_awebp_to_single_png_with_animated() {
         let awebp_bytes = include_bytes!("../tests/images/animated-webp-supported.webp");
@@ -134,7 +142,9 @@ mod tests {
         let png_decoder = png::Decoder::new(&png_bytes[..]);
         png_decoder.read_info().unwrap();
 
-        let mut file = File::create("/tmp/animated-webp-supported.png").unwrap();
+        let tmp_dir = tempdir().unwrap();
+
+        let mut file = File::create(tmp_dir.path().join("animated-webp-supported.png")).unwrap();
         file.write_all(&png_bytes[..]).unwrap();
         file.sync_all().unwrap();
     }
@@ -144,16 +154,24 @@ mod tests {
         let awebp_bytes = include_bytes!("../tests/images/animated-webp-supported.webp");
         let png_bytes_list = awebp_to_multi_png(awebp_bytes).unwrap();
 
-        fs::create_dir("/tmp/animated-webp-supported").unwrap();
+        let tmp_dir = Builder::new()
+            .prefix("animated-webp-supported")
+            .tempdir()
+            .unwrap();
 
         for (i, png_bytes) in png_bytes_list.into_iter().enumerate() {
             let png_decoder = png::Decoder::new(&png_bytes[..]);
             png_decoder.read_info().unwrap();
 
-            let mut file = File::create(format!("/tmp/animated-webp-supported/{}.png", i)).unwrap();
+            let mut file = File::create(tmp_dir.path().join(format!("{}.png", i))).unwrap();
             file.write_all(&png_bytes[..]).unwrap();
             file.sync_all().unwrap();
         }
+
+        println!(
+            "{:?}",
+            fs::read_dir(tmp_dir.path()).unwrap().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -164,7 +182,9 @@ mod tests {
         let png_decoder = png::Decoder::new(&png_bytes[..]);
         png_decoder.read_info().unwrap();
 
-        let mut file = File::create("/tmp/3_webp_ll.png").unwrap();
+        let tmp_dir = tempdir().unwrap();
+
+        let mut file = File::create(tmp_dir.path().join("3_webp_ll.png")).unwrap();
         file.write_all(&png_bytes[..]).unwrap();
         file.sync_all().unwrap();
     }
@@ -174,15 +194,20 @@ mod tests {
         let awebp_bytes = include_bytes!("../tests/images/3_webp_ll.webp");
         let png_bytes_list = awebp_to_multi_png(awebp_bytes).unwrap();
 
-        fs::create_dir("/tmp/3_webp_ll").unwrap();
+        let tmp_dir = Builder::new().prefix("3_webp_ll").tempdir().unwrap();
 
         for (i, png_bytes) in png_bytes_list.into_iter().enumerate() {
             let png_decoder = png::Decoder::new(&png_bytes[..]);
             png_decoder.read_info().unwrap();
 
-            let mut file = File::create(format!("/tmp/3_webp_ll/{}.png", i)).unwrap();
+            let mut file = File::create(tmp_dir.path().join(format!("{}.png", i))).unwrap();
             file.write_all(&png_bytes[..]).unwrap();
             file.sync_all().unwrap();
         }
+
+        println!(
+            "{:?}",
+            fs::read_dir(tmp_dir.path()).unwrap().collect::<Vec<_>>()
+        );
     }
 }
