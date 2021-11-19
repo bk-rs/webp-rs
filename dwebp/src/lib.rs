@@ -75,6 +75,34 @@ pub fn awebp_to_single_png(
     Ok(buf)
 }
 
+pub fn awebp_to_multi_png(awebp_bytes: impl AsRef<[u8]>) -> Result<Vec<Vec<u8>>, AwebpToPngError> {
+    let awebp_decoder =
+        AwebPDecoder::new(awebp_bytes.as_ref()).map_err(|_| AwebpToPngError::DecodeAwebpFailed)?;
+
+    let awebp_decoder_iter = awebp_decoder.into_iter();
+
+    awebp_decoder_iter
+        .map(|webp_frame| {
+            let image = webp_frame
+                .into_image()
+                .map_err(|_| AwebpToPngError::ToImageFailed)?;
+
+            let mut buf = Vec::with_capacity(image.as_bytes().len());
+
+            PngEncoder::new(&mut buf)
+                .write_image(
+                    image.as_bytes(),
+                    image.width(),
+                    image.height(),
+                    Rgba::<u8>::COLOR_TYPE,
+                )
+                .map_err(|_| AwebpToPngError::EncodePngFailed)?;
+
+            Ok(buf)
+        })
+        .collect::<Result<_, _>>()
+}
+
 #[derive(Debug)]
 pub enum AwebpToPngError {
     DecodeAwebpFailed,
@@ -93,10 +121,13 @@ impl error::Error for AwebpToPngError {}
 mod tests {
     use super::*;
 
-    use std::{fs::File, io::Write as _};
+    use std::{
+        fs::{self, File},
+        io::Write as _,
+    };
 
     #[test]
-    fn with_animated() {
+    fn test_awebp_to_single_png_with_animated() {
         let awebp_bytes = include_bytes!("../tests/images/animated-webp-supported.webp");
         let png_bytes = awebp_to_single_png(awebp_bytes, AwebpFramePosition::Last).unwrap();
 
@@ -109,7 +140,24 @@ mod tests {
     }
 
     #[test]
-    fn with_not_animated() {
+    fn test_awebp_to_multi_png_with_animated() {
+        let awebp_bytes = include_bytes!("../tests/images/animated-webp-supported.webp");
+        let png_bytes_list = awebp_to_multi_png(awebp_bytes).unwrap();
+
+        fs::create_dir("/tmp/animated-webp-supported").unwrap();
+
+        for (i, png_bytes) in png_bytes_list.into_iter().enumerate() {
+            let png_decoder = png::Decoder::new(&png_bytes[..]);
+            png_decoder.read_info().unwrap();
+
+            let mut file = File::create(format!("/tmp/animated-webp-supported/{}.png", i)).unwrap();
+            file.write_all(&png_bytes[..]).unwrap();
+            file.sync_all().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_awebp_to_single_png_with_not_animated() {
         let awebp_bytes = include_bytes!("../tests/images/3_webp_ll.webp");
         let png_bytes = awebp_to_single_png(awebp_bytes, None).unwrap();
 
@@ -119,5 +167,22 @@ mod tests {
         let mut file = File::create("/tmp/3_webp_ll.png").unwrap();
         file.write_all(&png_bytes[..]).unwrap();
         file.sync_all().unwrap();
+    }
+
+    #[test]
+    fn test_awebp_to_multi_png_with_not_animated() {
+        let awebp_bytes = include_bytes!("../tests/images/3_webp_ll.webp");
+        let png_bytes_list = awebp_to_multi_png(awebp_bytes).unwrap();
+
+        fs::create_dir("/tmp/3_webp_ll").unwrap();
+
+        for (i, png_bytes) in png_bytes_list.into_iter().enumerate() {
+            let png_decoder = png::Decoder::new(&png_bytes[..]);
+            png_decoder.read_info().unwrap();
+
+            let mut file = File::create(format!("/tmp/3_webp_ll/{}.png", i)).unwrap();
+            file.write_all(&png_bytes[..]).unwrap();
+            file.sync_all().unwrap();
+        }
     }
 }
