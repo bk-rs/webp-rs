@@ -13,3 +13,8 @@ categories = []
 readme = "README.md"
 
 [dependencies]
+webp-animation = { version = "0.4", default-features = false, features = ["image"] }
+image = { version = "0.23", default-features = false, features = [ "png" ] }
+
+[dev-dependencies]
+png = { version = "0.17", default-features = false }
